@@ -6,10 +6,18 @@ function message(t){$('message').textContent=t}
 const GAS_URL = "https://script.google.com/macros/u/1/s/AKfycbwkhqleS4p6xXVNnKtyGU4G4LrLelIYTSJ3vqjkNjcgySR9ZxQ3tSXvxKNDJOq8wDbo/exec";
 const SESSION_KEY='parallelogram-gas-session';
 let sessionToken='';try{sessionToken=sessionStorage.getItem(SESSION_KEY)||''}catch{}
+function gasEndpoint(value){
+ try{
+ const url=new URL(String(value).trim());
+ const match=url.pathname.match(/^\/macros\/(?:u\/\d+\/)?s\/([A-Za-z0-9_-]+)\/exec\/?$/);
+ if(url.protocol!=='https:'||url.hostname!=='script.google.com'||url.port||!match)throw Error();
+ return 'https://script.google.com/macros/s/'+match[1]+'/exec';
+ }catch{throw Error('저장 서버 주소를 확인해 주세요. Apps Script 웹 앱의 /exec 주소를 GAS_URL에 넣어 주세요.')}
+}
 async function api(action,body){
- if(!/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec$/.test(GAS_URL))throw Error('아직 저장 서버가 연결되지 않았습니다. 선생님께 알려 주세요.');
+ const endpoint=gasEndpoint(GAS_URL);
  let data;
- try{const r=await fetch(GAS_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},redirect:'follow',credentials:'omit',body:JSON.stringify({action,token:sessionToken,...(body||{})})});if(!r.ok)throw Error();data=await r.json()}catch{throw Error('저장에 실패했습니다. 인터넷 연결을 확인한 후 다시 시도하세요.')}
+ try{const r=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},redirect:'follow',credentials:'omit',body:JSON.stringify({action,token:sessionToken,...(body||{})})});if(!r.ok)throw Error();data=await r.json()}catch{throw Error('저장에 실패했습니다. 인터넷 연결을 확인한 후 다시 시도하세요.')}
  if(!data.success){if(data.code==='AUTH'){sessionToken='';try{sessionStorage.removeItem(SESSION_KEY)}catch{}}throw Error(data.message||'저장에 실패했습니다. 인터넷 연결을 확인한 후 다시 시도하세요.')}
  if(action==='login'){sessionToken=data.token;try{sessionStorage.setItem(SESSION_KEY,sessionToken)}catch{}}
  if(action==='logout'){sessionToken='';try{sessionStorage.removeItem(SESSION_KEY)}catch{}}
